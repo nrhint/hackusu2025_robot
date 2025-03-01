@@ -74,6 +74,7 @@ Used:
  /* MOTOR SETUP */
  const int stepsPerRevolution = 515;  // change this to fit the number of steps per revolution
  const int tenthRevolution = 51;
+ const int twoTenthRevolution = 102;
  long int robotMotorSteps = 0;
  long int robotMotorLastReportSteps = 0;
  
@@ -90,6 +91,7 @@ Used:
  void TurnRight(int steps);
  
  
+ int turnedFromWall = 0;
  /// @brief Setup the sensors and motors
  void setup() {
    // Setup light for error
@@ -169,6 +171,7 @@ Used:
      Serial.print("SMP initalization failed with code: ");
      Serial.println(devStatus);
    }*/
+   delay(1000);
  }
  
  /// @brief Main look for the robot
@@ -206,28 +209,46 @@ Used:
      Serial.print(", ");
      Serial.print(leftUltraReading, 2);
      Serial.print(", ");
-     Serial.print(report_angle * 180/M_PI);
+     Serial.print(report_angle);
      Serial.print(", ");
      Serial.print(robotMotorSteps);
    }
    int onWall = 1;
-   
-   
-   if (frontUltraReading < 10){
+    robotMotorSteps = 0;
+    report_angle = 0;
+   if (frontUltraReading < 15){
     //If hit forward wall, turn full left
     TurnLeft(500);
+    report_angle = 90;
     onWall = 1;
    }else if (rightUltraReading < 10){
     //If getting too close to wall slight turn
-    TurnLeft(tenthRevolution);
-    MoveForward(tenthRevolution);
-    TurnLeft(26);
-    onWall = 1;
-   }/*else if(onWall && (rightUltraReading > 40)){
+    if (turnedFromWall == 0){
+      TurnLeft(tenthRevolution + 10);
+      MoveForward(tenthRevolution);
+      //TurnRight(tenthRevolution);
+      robotMotorSteps = tenthRevolution;
+      report_angle = 10;
+      onWall = 1;
+      turnedFromWall = 1;
+    }else{
+      MoveForward(tenthRevolution);
+      robotMotorSteps = tenthRevolution;
+    }
+   }else if (rightUltraReading > 20){
+    //Too far from wall
+    TurnRight(tenthRevolution);
+    MoveForward(twoTenthRevolution);
+    robotMotorSteps = twoTenthRevolution;
+    report_angle = 10;
+   }
+   /*else if(onWall && (rightUltraReading > 40)){
     //If follwing wall and hit outside turn, turn right
     TurnRight(500);
    }*/else if(frontUltraReading > 10) {
-     MoveForward(tenthRevolution*2);
+     MoveForward(twoTenthRevolution);
+     robotMotorSteps = twoTenthRevolution;
+     turnedFromWall = 0;
    }
  }
  
@@ -298,7 +319,6 @@ Used:
  float read_ultrasonic(int trigger, int echo) {
    float avg = 0;
    for (int ii = 0; ii < 3; ii++) {
-     Serial.println(ii);
      digitalWrite(trigger, LOW);
      delayMicroseconds(2);
      digitalWrite(trigger, HIGH);
