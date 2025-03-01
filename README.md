@@ -14,6 +14,7 @@ So more pin constriction. We realized that the GPS is not locking onto a signal 
 
 We were hoping to have all of our system running on 1 arduino but with how much time it takes some of our functions to run, we were running into timing issues. We decided to split our workload between 2 arduinos by having the ultrasonic sensors and gyroscope on one and the motors running on the other. 
 
+Update: At this point (midnight, 6 hours in) we had a prototype robot base. There were some minor things that we wanted to fix with the 3d print however it looks good. We are still waiting on the wheels to be finished to start driving around. At this point we started to look forward a bit as to how we would display the data. The current solution is to store the data on the RPI and then use a python script and turtle to graphicaly show where the robot went as well as sensor data points around the robot. We also started to consider how the robot should explore the environment. One idea is to simply follow a wall which should work for most closed spaces however we could potentally get a more accurate sample using a different method such as havin squares that we fill in. Also at the moment we have a potential issue with the ultrasonic sensors timing out. I think that we will need to improve the method used to sample the environment that will allow us to either end early or more ideally perform an interupt when the echo pin goes high.
 
 # Libraries and code used:
 
