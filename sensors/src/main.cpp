@@ -8,6 +8,8 @@
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
 
+#define DEBUG
+
 #ifdef DEBUG
 #define DEBUG_PRINT(x) Serial.println(x)
 #else
@@ -33,6 +35,7 @@ MPU6050 mpu;
 int const MPU_INTERRUPT_PIN = 2; // Define the interruption #0 pin
 long int xPosition = 0; // These should be measured in cm which should give us *plenty* of precision
 long int yPosition = 0;
+double report_angle = 0;
 
 bool DMPReady = false;  // Set true if DMP init was successful
 uint8_t MPUIntStatus;   // Holds actual interrupt status byte from MPU
@@ -55,11 +58,11 @@ void error_blink(void);
 
 void setup() {
   pinMode(13, OUTPUT);
-  digitalWrite(13, HIGH);
-  delay(500);
-  digitalWrite(13, LOW);
-  delay(4500); // wait a while for the robot to be stable before initalizing stuff
-  digitalWrite(13, HIGH); // Write debug light high, if there is a problem it will blink.
+  // digitalWrite(13, HIGH);
+  // delay(500);
+  // digitalWrite(13, LOW);
+  // delay(4500); // wait a while for the robot to be stable before initalizing stuff
+  // digitalWrite(13, HIGH); // Write debug light high, if there is a problem it will blink.
   Wire.begin();
   Wire.setClock(400000); // 400kHz I2C clock. Comment on this line if having compilation difficulties
   Serial.begin(115200);
@@ -68,6 +71,7 @@ void setup() {
   // initialize the MPU device
   DEBUG_PRINT("initalizing I2C devices");
   mpu.initialize();
+  Serial.println("test");
   pinMode(MPU_INTERRUPT_PIN, INPUT);
 
   DEBUG_PRINT("Testing connection to MPU6050");
@@ -93,8 +97,6 @@ void setup() {
   if (devStatus == 0) {
     mpu.CalibrateAccel(6); // the calibration time.
     mpu.CalibrateGyro(6);
-    DEBUG_PRINT("active offsets:");
-    DEBUG_PRINT(mpu.PrintActiveOffsets);
     DEBUG_PRINT("Enabling DMP");
     mpu.setDMPEnabled(true);
 
@@ -123,6 +125,14 @@ void loop() {
     mpu.dmpGetGravity(&gravity, &q);
     mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
     mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
+    report_angle = ypr[0]; // the yaw of the sensor
+    Serial.print("areal\t");
+    Serial.print(aaReal.x);
+    Serial.print("\t");
+    Serial.print(aaReal.y);
+    Serial.print("\t");
+    Serial.println(aaReal.z);    xPosition += cos(report_angle) * aaReal.x;
+    yPosition += sin(report_angle) * aaReal.x;
   }
   // Sample the ultrasonic sensor
   unsigned long currentMillis = millis();
@@ -134,9 +144,17 @@ void loop() {
   if (currentMillis - previous_report_millis >= report_interval) {
     previous_report_millis = currentMillis;
     // Print out lines to pi
-    Serial.print((ultra1_reading/(report_interval/ultra_sensor_interval)) + ',' + ' ');
-    Serial.print((ultra2_reading/(report_interval/ultra_sensor_interval)) + ',' + ' ');
-    Serial.print((ultra3_reading/(report_interval/ultra_sensor_interval)) + ',' + ' ');
+    Serial.print(ultra1_reading/(report_interval/ultra_sensor_interval), 2);
+    Serial.print(", ");
+    Serial.print(ultra2_reading/(report_interval/ultra_sensor_interval), 2);
+    Serial.print(", ");
+    Serial.print(ultra3_reading/(report_interval/ultra_sensor_interval), 2);
+    Serial.print(", ");
+    Serial.print(report_angle * 180/M_PI);
+    Serial.print(", ");
+    Serial.print(xPosition);
+    Serial.print(", ");
+    Serial.print(yPosition);
     Serial.println();
     // Reset report variables
     ultra1_reading = 0;
