@@ -11,8 +11,8 @@ Used:
  * by Isaac100
  */
  
- #include "I2Cdev.h"
- #include "MPU6050_6Axis_MotionApps20.h"
+ //#include "I2Cdev.h"
+ //#include "MPU6050_6Axis_MotionApps20.h"
  
  #define DEBUG
  
@@ -27,20 +27,23 @@ Used:
  #define FRONT_ULTRA_ECHO PIN_A1
  #define RIGHT_ULTRA_TRIGGER PIN_A2
  #define RIGHT_ULTRA_ECHO PIN_A3
- #define LEFT_ULTRA_TRIGGER PIN_A4
- #define LEFT_ULTRA_ECHO PIN_A5
+ #define LEFT_ULTRA_TRIGGER 12
+ #define LEFT_ULTRA_ECHO 3
  
  unsigned long previous_ultra_millis = 0;
  #define ultraSensorInterval 100
  float frontUltraReading = 0;
  float rightUltraReading = 0;
  float  leftUltraReading = 0;
+ float frontUltraReadingPrev = 0;
+ float rightUltraReadingPrev = 0;
+ float  leftUltraReadingPrev = 0;
  
  unsigned long previous_report_millis = 0;
  #define report_interval 1000
  
  /* Setup for the MPU6050 */
- MPU6050 mpu;
+ //MPU6050 mpu;
  
  int const MPU_INTERRUPT_PIN = 2; // Define the interruption #0 pin
  long int xPosition = 0; // These should be measured in cm which should give us *plenty* of precision
@@ -53,11 +56,12 @@ Used:
  uint8_t devStatus;      // Return status after each device operation (0 = success, !0 = error)
  uint16_t packetSize;    // Expected DMP packet size (default is 42 bytes)
  uint8_t FIFOBuffer[64]; // FIFO storage buffer
+ /*
  Quaternion q;
  VectorInt16 aa;
  VectorInt16 aaReal;
  VectorFloat gravity;
- float ypr[3];
+ float ypr[3];*/
   
  volatile bool MPUInterrupt = false;     // Indicates whether MPU6050 interrupt pin has gone high
  void DMPDataReady() {
@@ -68,7 +72,8 @@ Used:
  long int robotLastReportAngle = 0;
  
  /* MOTOR SETUP */
- const int stepsPerRevolution = 200;  // change this to fit the number of steps per revolution
+ const int stepsPerRevolution = 515;  // change this to fit the number of steps per revolution
+ const int tenthRevolution = 51;
  long int robotMotorSteps = 0;
  long int robotMotorLastReportSteps = 0;
  
@@ -110,24 +115,24 @@ Used:
    pinMode(LEFT_ULTRA_TRIGGER, OUTPUT);
    pinMode(LEFT_ULTRA_ECHO, INPUT);
  
-   /* SETUP THE MPU */
+   /* SETUP THE MPU 
    digitalWrite(13, HIGH);
    delay(500);
    digitalWrite(13, LOW);
    delay(4500); // wait a while for the robot to be stable before initalizing stuff
    digitalWrite(13, HIGH); // Write debug light high, if there is a problem it will blink.
    Wire.begin();
-   Wire.setClock(400000); // 400kHz I2C clock. Comment on this line if having compilation difficulties
+   Wire.setClock(400000);*/ // 400kHz I2C clock. Comment on this line if having compilation difficulties
    Serial.begin(115200);
    while (!Serial);
  
    // initialize the MPU device
    DEBUG_PRINT("initalizing I2C devices");
-   mpu.initialize();
+   //mpu.initialize();
    Serial.println("test");
    pinMode(MPU_INTERRUPT_PIN, INPUT);
  
-   DEBUG_PRINT("Testing connection to MPU6050");
+   DEBUG_PRINT("Testing connection to MPU6050");/*
    if (mpu.testConnection() == false) {
      Serial.println("FAILED TO CONNECT TO MPU6050!!!");
      // Blink the light if there is an error
@@ -163,26 +168,31 @@ Used:
    } else {
      Serial.print("SMP initalization failed with code: ");
      Serial.println(devStatus);
-   }
+   }*/
  }
  
  /// @brief Main look for the robot
  void loop() {
    // Sample the mpu:
-   if (mpu.dmpGetCurrentFIFOPacket(FIFOBuffer)) {
+   /*if (mpu.dmpGetCurrentFIFOPacket(FIFOBuffer)) {
      mpu.dmpGetQuaternion(&q, FIFOBuffer);
      mpu.dmpGetGravity(&gravity, &q);
      mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
      currentRobotAngle = ypr[0]; // the yaw of the sensor (This is in radians)
-   }
+   }*/
  
    // Sample the ultrasonic sensors
    unsigned long currentMillis = millis();
    if (currentMillis - previous_ultra_millis >= ultraSensorInterval) {
      // Save the last time the function was called
      previous_ultra_millis = currentMillis;
+     frontUltraReadingPrev = frontUltraReading;
      frontUltraReading = read_ultrasonic(FRONT_ULTRA_TRIGGER, FRONT_ULTRA_ECHO);
+     delay(2);
+     rightUltraReadingPrev = rightUltraReading;
      rightUltraReading = read_ultrasonic(RIGHT_ULTRA_TRIGGER, RIGHT_ULTRA_ECHO);
+     delay(2);
+     leftUltraReadingPrev = leftUltraReading;
      leftUltraReading = read_ultrasonic(LEFT_ULTRA_TRIGGER, LEFT_ULTRA_ECHO);
    }
  
@@ -200,10 +210,24 @@ Used:
      Serial.print(", ");
      Serial.print(robotMotorSteps);
    }
- 
-   if (frontUltraReading > 10) {
-     MoveForward(515);
-     delay(3000);
+   int onWall = 1;
+   
+   
+   if (frontUltraReading < 10){
+    //If hit forward wall, turn full left
+    TurnLeft(500);
+    onWall = 1;
+   }else if (rightUltraReading < 10){
+    //If getting too close to wall slight turn
+    TurnLeft(tenthRevolution);
+    MoveForward(tenthRevolution);
+    TurnLeft(26);
+    onWall = 1;
+   }/*else if(onWall && (rightUltraReading > 40)){
+    //If follwing wall and hit outside turn, turn right
+    TurnRight(500);
+   }*/else if(frontUltraReading > 10) {
+     MoveForward(tenthRevolution*2);
    }
  }
  
@@ -281,6 +305,7 @@ Used:
      delayMicroseconds(10);
      digitalWrite(trigger, LOW);
      unsigned long duration = pulseIn(echo, HIGH);
+     delay(2);
      avg += (duration*.0343)/2;
    }
    return avg/3;
