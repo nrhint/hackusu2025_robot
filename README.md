@@ -15,3 +15,6 @@ So more pin constriction. We realized that the GPS is not locking onto a signal 
 We were hoping to have all of our system running on 1 arduino but with how much time it takes some of our functions to run, we were running into timing issues. We decided to split our workload between 2 arduinos by having the ultrasonic sensors and gyroscope on one and the motors running on the other. 
 
 
+# Libraries and code used:
+
+Library for reading the MPU 6050: https://github.com/ElectronicCats/mpu6050
